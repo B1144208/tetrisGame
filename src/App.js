@@ -1,6 +1,28 @@
-import logo from './logo.svg';
+//import logo from './logo.svg';
 import './App.css';
+import TetrisGrid from "./components/TetrisGrid";
 
+/*
+function App() {
+  return (
+    <div className="flex justify-center items-center min-h-screen bg-gray-900">
+      <TetrisGrid />
+    </div>
+  );
+}
+*/
+
+
+
+const App = () => {
+  return (
+    <TetrisGrid />
+  );
+};
+
+
+
+/*
 function App() {
   return (
     <div className="App">
@@ -21,5 +43,5 @@ function App() {
     </div>
   );
 }
-
+*/
 export default App;

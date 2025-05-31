@@ -28,11 +28,11 @@ const TetrisGrid = () => {
   );
 
   const [position, setPosition] = useState({ row: 0, col: 3 });
-  
   const [holdPiece, setHoldPiece] = useState(null);
   const initialQueue = shuffle(TETROMINOS);
   const [nextQueue, setNextQueue] = useState(initialQueue.slice(1));
   const [activePiece, setActivePiece] = useState(initialQueue[0]);
+  const [shadowOverlapCount, setShadowOverlapCount] = useState(0);
   const [isHold, setIsHold] = useState(false);
   const [gameOver, setGameOver] = useState(false);
   const lastMoveTimeRef = useRef(Date.now());
@@ -80,6 +80,7 @@ const TetrisGrid = () => {
 
   // 往下移動
   const moveDown = () => {
+    if (gameOver) return;
     setPosition(prev => {
       const newRow = prev.row + 1;
       return isValidPosition(newRow, prev.col) ? { ...prev, row: newRow } : prev;
@@ -96,7 +97,7 @@ const TetrisGrid = () => {
     return { ...piece, shape: newShape };
   };
   
-  //
+  // HOLD 區塊
   const holdSwap = () => {
 
     if (!holdPiece && !isHold) {
@@ -111,45 +112,103 @@ const TetrisGrid = () => {
   };
 
   // 中間 區塊
-  const spawnGrid = Array.from({ length: rows * cols }, (_, index) => ({
-    ...gridData[index],
-    isShadow: false
-  }));
+  
 
-  const getShadowRow = () => {
-    let shadowRow = position.row;
-    while (isValidPosition(shadowRow + 1, position.col)) {
-      shadowRow++;
-    }
-    return shadowRow;
-  };
+  
+    const spawnGrid = Array.from({ length: rows * cols }, (_, index) => ({
+      ...gridData[index],
+      isShadow: false
+    }));
 
-  const shadowRow = getShadowRow();
-
-  let shadowOverlapCount = 0;
-
-  activePiece.shape.forEach(i => {
-    const r = Math.floor(i / activePiece.size);
-    const c = i % activePiece.size;
-    const shadowRowPos = r + shadowRow;
-    const activeRowPos = r + position.row;
-    const col = c + ((activePiece.size === 2) ? position.col + 1 : position.col);
-    const shadowIndex = shadowRowPos * cols + col;
-    const activeIndex = activeRowPos * cols + col;
-
-    if (shadowRowPos >= 0 && shadowRowPos < rows && col >= 0 && col < cols) {
-      spawnGrid[shadowIndex] = { ...spawnGrid[shadowIndex], filled: true, color: '#3E3727', isShadow: true };
-    }
-
-    if (activeRowPos >= 0 && activeRowPos < rows && col >= 0 && col < cols) {
-      if (spawnGrid[activeIndex].isShadow) {
-        shadowOverlapCount++;
+    const getShadowRow = () => {
+      let shadowRow = position.row;
+      while (isValidPosition(shadowRow + 1, position.col)) {
+        shadowRow++;
       }
-      spawnGrid[activeIndex] = { filled: true, color: activePiece.color, isShadow: false };
-    }
-  });
+      return shadowRow;
+    };
 
-  if (shadowOverlapCount === 4) {
+    const shadowRow = getShadowRow();
+    let count = 0;
+    activePiece.shape.forEach(i => {
+      const r = Math.floor(i / activePiece.size);
+      const c = i % activePiece.size;
+      const shadowRowPos = r + shadowRow;
+      const activeRowPos = r + position.row;
+      const col = c + ((activePiece.size === 2) ? position.col + 1 : position.col);
+      const shadowIndex = shadowRowPos * cols + col;
+      const activeIndex = activeRowPos * cols + col;
+
+      if (shadowRowPos >= 0 && shadowRowPos < rows && col >= 0 && col < cols) {
+        spawnGrid[shadowIndex] = { ...spawnGrid[shadowIndex], filled: true, color: '#3E3727', isShadow: true };
+      }
+
+      if (activeRowPos >= 0 && activeRowPos < rows && col >= 0 && col < cols) {
+        if (spawnGrid[activeIndex].isShadow) {
+          count++;
+        }
+        spawnGrid[activeIndex] = { filled: true, color: activePiece.color, isShadow: false };
+      }
+    });
+  useEffect(()=>{
+    setShadowOverlapCount(count);
+  },  [count]);
+  
+
+  useEffect(()=>{
+    if (shadowOverlapCount === 4) {
+      //moveDown();
+      let  newGridData = [...gridData];
+      activePiece.shape.forEach(i => {
+        const r = Math.floor(i / activePiece.size);
+        const c = i % activePiece.size;
+        const row = r + position.row;
+        const col = c + ((activePiece.size === 2) ? position.col + 1 : position.col);
+        const index = row * cols + col;
+        if (row >= 0 && row < rows && col >= 0 && col < cols) {
+          newGridData[index] = { filled: true, color: activePiece.color };
+        }
+      });
+      
+      // Line clear logic
+      for (let r = 0; r < rows; r++) {
+        const rowStart = r * cols;
+        const rowFilled = newGridData.slice(rowStart, rowStart + cols).every(cell => cell.filled);
+        if (rowFilled) {
+          const newRow = Array.from({ length: cols }, () => ({ filled: false, color: 'black' }));
+          newGridData = [
+            ...newRow,
+            ...newGridData.slice(0, rowStart),
+            ...newGridData.slice(rowStart + cols)
+          ];
+        }
+      }
+      setGridData(newGridData);
+      
+      const gameOverTrigger = newGridData.some((cell, index) => {
+        const row = Math.floor(index / cols);
+        return row < 2 && cell.filled;
+      });
+
+      if (gameOverTrigger) {
+        setGameOver(true);
+        return;
+      }else{
+        const [next, ...rest] = nextQueue;
+        setActivePiece(next);
+        setNextQueue(prevQueue => {
+          if (rest.length < 5) {
+            return [...rest, ...shuffle(TETROMINOS)];
+          }
+          return rest;
+        });
+        setPosition({ row: 0, col: 3 });
+      }
+      setShadowOverlapCount(0);
+    }
+  }, [shadowOverlapCount]);
+
+ /* if (shadowOverlapCount === 4) {
     //moveDown();
     let  newGridData = [...gridData];
     activePiece.shape.forEach(i => {
@@ -162,6 +221,7 @@ const TetrisGrid = () => {
         newGridData[index] = { filled: true, color: activePiece.color };
       }
     });
+
     // Line clear logic
     for (let r = 0; r < rows; r++) {
       const rowStart = r * cols;
@@ -176,6 +236,11 @@ const TetrisGrid = () => {
       }
     }
     setGridData(newGridData);
+    
+    if (gameOverTrigger) {
+      setGameOver(true);
+      return;
+    }
 
     const [next, ...rest] = nextQueue;
     setActivePiece(next);
@@ -186,8 +251,7 @@ const TetrisGrid = () => {
       return rest;
     });
     setPosition({ row: 0, col: 3 });
-  }
-
+  }*/
 
   const borderedGrid = [];
   for (let r = 0; r < rows; r++) {
@@ -218,6 +282,7 @@ const TetrisGrid = () => {
 
   useEffect(() =>{
     const handleKeyDown = (e) => {
+      if (gameOver) return;
       if(e.key==='ArrowLeft') moveLeft();
       else if (e.key === 'ArrowRight') moveRight();
       else if (e.key === 'ArrowDown') moveDown();
@@ -260,12 +325,12 @@ const TetrisGrid = () => {
   }, [position, activePiece, holdPiece] );
 
   useEffect(() =>{
+    if (gameOver) return;
     const interval = setInterval(() => {
       moveDown();
     }, 750);
     return () => clearInterval(interval);
   }, [] );
-
 
   const holdCells = Array.from({ length: 3 * 5 }, (_, i) => {
     const row = Math.floor(i / 5);
@@ -412,12 +477,12 @@ const TetrisGrid = () => {
       {/*{showFail && (
         <div style={{ position: 'absolute', top: '40%', left: '50%', transform: 'translate(-50%, -50%)', color: 'red', fontSize: '48px', fontWeight: 'bold' }}>FAIL</div>
       )}*/}
-      {/*gameOver && (
+      {gameOver && (
         <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', color: 'red', fontSize: '40px', textAlign: 'center' }}>
           Game Over<br />
           <button onClick={resetGame} style={{ marginTop: '20px', padding: '10px 20px', fontSize: '16px' }}>Restart</button>
         </div>
-      )*/}
+      )}
     </div>
     </div>
     

@@ -46,6 +46,7 @@ const TetrisGrid = () => {
     setHoldPiece(null);
     setGameOver(false);
   };
+  
 
   const gridWidth = cols * 24 + 4;
   const gridHeight = rows * 24 + 4;
@@ -111,10 +112,7 @@ const TetrisGrid = () => {
     setPosition({ row: 0, col: 3 });
   };
 
-  // 中間 區塊
-  
-
-  
+  // 中間 區塊  
     const spawnGrid = Array.from({ length: rows * cols }, (_, index) => ({
       ...gridData[index],
       isShadow: false
@@ -207,51 +205,6 @@ const TetrisGrid = () => {
       setShadowOverlapCount(0);
     }
   }, [shadowOverlapCount]);
-
- /* if (shadowOverlapCount === 4) {
-    //moveDown();
-    let  newGridData = [...gridData];
-    activePiece.shape.forEach(i => {
-      const r = Math.floor(i / activePiece.size);
-      const c = i % activePiece.size;
-      const row = r + position.row;
-      const col = c + ((activePiece.size === 2) ? position.col + 1 : position.col);
-      const index = row * cols + col;
-      if (row >= 0 && row < rows && col >= 0 && col < cols) {
-        newGridData[index] = { filled: true, color: activePiece.color };
-      }
-    });
-
-    // Line clear logic
-    for (let r = 0; r < rows; r++) {
-      const rowStart = r * cols;
-      const rowFilled = newGridData.slice(rowStart, rowStart + cols).every(cell => cell.filled);
-      if (rowFilled) {
-        const newRow = Array.from({ length: cols }, () => ({ filled: false, color: 'black' }));
-        newGridData = [
-          ...newRow,
-          ...newGridData.slice(0, rowStart),
-          ...newGridData.slice(rowStart + cols)
-        ];
-      }
-    }
-    setGridData(newGridData);
-    
-    if (gameOverTrigger) {
-      setGameOver(true);
-      return;
-    }
-
-    const [next, ...rest] = nextQueue;
-    setActivePiece(next);
-    setNextQueue(prevQueue => {
-      if (rest.length < 5) {
-        return [...rest, ...shuffle(TETROMINOS)];
-      }
-      return rest;
-    });
-    setPosition({ row: 0, col: 3 });
-  }*/
 
   const borderedGrid = [];
   for (let r = 0; r < rows; r++) {
